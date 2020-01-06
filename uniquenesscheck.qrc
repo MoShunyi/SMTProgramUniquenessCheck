@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="UniquenessCheck"/>
+  <qresource prefix="image">
+    <file>Resources/image/Logo with Slogan_Blue.jpg</file>
+  </qresource>
+</RCC>
