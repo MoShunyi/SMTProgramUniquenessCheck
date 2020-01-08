@@ -308,8 +308,10 @@ void UniquenessCheck::CheckActionOnce()
 {
 	QString strQuerySameName = QString(QStringLiteral("select lineNo, programName, version from smtProgram a where programName in (select programName "))
         .append(QStringLiteral(" from smtProgram b where a.programName = b.programName and a.version <> b.version and a.lineNo <> b.lineNo ) order by programName, lineNo"));//查找不同线同名不同版本
-	QString strQuerySameLine = QString(QStringLiteral("select lineNo, programName, version from smtProgram where programName in "))
-		.append(QStringLiteral("( select programName from smtProgram group by lineNo, programName having count(*) > 1 ) order by programName,lineNo ")); //查找同线同名
+	//QString strQuerySameLine = QString(QStringLiteral("select lineNo, programName, version from smtProgram where programName in "))
+	//	.append(QStringLiteral("( select programName from smtProgram group by lineNo, programName having count(*) > 1 ) order by programName,lineNo ")); //查找同线同名
+	QString strQuerySameLine = QString(QStringLiteral("select lineNo, programName, version from smtProgram a where programName in (select programName "))
+		.append(QStringLiteral(" from smtProgram b where a.programName = b.programName and a.version <> b.version and a.lineNo = b.lineNo ) order by programName, lineNo")); //查找同线同名不同版本
 	if (DisplayResult(strQuerySameName,strQuerySameLine) == true)
 	{
 		ui.labelResult->setText(QString(QStringLiteral("The Result is NOK")));

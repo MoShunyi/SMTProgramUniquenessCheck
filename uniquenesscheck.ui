@@ -294,7 +294,7 @@ color: rgb(0, 57, 115);</string>
               <item>
                <widget class="QGroupBox" name="groupBox1">
                 <property name="title">
-                 <string>Same Name Different Version:</string>
+                 <string>Same Name In Different Line:</string>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_10">
                  <item>

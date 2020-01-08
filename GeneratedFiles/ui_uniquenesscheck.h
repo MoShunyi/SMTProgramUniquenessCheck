@@ -395,7 +395,7 @@ public:
         labelTime->setText(QApplication::translate("UniquenessCheckClass", "TextLabel", 0));
         pushButtonRecheck->setText(QApplication::translate("UniquenessCheckClass", "Recheck", 0));
         labelResult->setText(QApplication::translate("UniquenessCheckClass", "The result is OK", 0));
-        groupBox1->setTitle(QApplication::translate("UniquenessCheckClass", "Same Name Different Version:", 0));
+        groupBox1->setTitle(QApplication::translate("UniquenessCheckClass", "Same Name In Different Line:", 0));
         groupBox1_2->setTitle(QApplication::translate("UniquenessCheckClass", "Same Name In Same Line:     ", 0));
         tabWidget->setTabText(tabWidget->indexOf(tabResult), QApplication::translate("UniquenessCheckClass", "Result", 0));
         labelLineNo->setText(QApplication::translate("UniquenessCheckClass", "LineNo\357\274\232", 0));
