@@ -53,7 +53,7 @@ public:
 	void DecompressingFiles();
 	void FindCrbFiles();
 	void ReadCrbFiles(QString filePath, QString lineNo);
-	void InsertData(QString prgName, QString prgVersion, QString lineNo);
+	void InsertData(QString prgName, QString prgVersion, QString lineNo, QString track);
 	void ClearTable();//清除数据库表格内容
 	void CheckActionOnce();//执行一次检查动作
 	void OnRecheckButtonClicked();

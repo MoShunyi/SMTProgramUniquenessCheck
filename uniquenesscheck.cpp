@@ -239,9 +239,10 @@ void UniquenessCheck::ReadCrbFiles(QString filePath,QString lineNo)
 			if (list.size() > 8)
 			{
 				QString prgName = list.at(1);
+				QString prgTrack = list.at(4).trimmed().right(1);
 				QString prgVersion = list.at(8);
-				qDebug()<<prgName<<" "<<prgVersion;
-				InsertData(prgName,prgVersion,lineNo);
+				qDebug()<<prgName<<" "<<prgVersion<<" "<<prgTrack;
+				InsertData(prgName,prgVersion,lineNo,prgTrack);
 			}
 			
 		}
@@ -249,7 +250,7 @@ void UniquenessCheck::ReadCrbFiles(QString filePath,QString lineNo)
 	}
 }
 
-void UniquenessCheck::InsertData(QString prgName, QString prgVersion, QString lineNo)
+void UniquenessCheck::InsertData(QString prgName, QString prgVersion, QString lineNo, QString track)
 {
 	if(!accessDB.open()) 
 	{
@@ -262,8 +263,8 @@ void UniquenessCheck::InsertData(QString prgName, QString prgVersion, QString li
 	}
 	QSqlDatabase::database().transaction();
 	QSqlQuery *sqlQuery = new QSqlQuery(accessDB);
-	QString strInsert = QString(QStringLiteral("insert into smtProgram(lineNo,programName,version) values ('%1','%2','%3')")
-		                .arg(lineNo,prgName,prgVersion));
+	QString strInsert = QString(QStringLiteral("insert into smtProgram(lineNo,programName,track,version) values ('%1','%2','%3','%4')")
+		                .arg(lineNo,prgName,track,prgVersion));
 	sqlQuery->exec(strInsert);
 	if (sqlQuery->numRowsAffected() > 0)
 	{
@@ -306,11 +307,11 @@ void UniquenessCheck::ClearTable()
 
 void UniquenessCheck::CheckActionOnce()
 {
-	QString strQuerySameName = QString(QStringLiteral("select lineNo, programName, version from smtProgram a where programName in (select programName "))
+	QString strQuerySameName = QString(QStringLiteral("select lineNo, programName, track, version from smtProgram a where programName in (select programName "))
         .append(QStringLiteral(" from smtProgram b where a.programName = b.programName and a.version <> b.version and a.lineNo <> b.lineNo ) order by programName, lineNo"));//查找不同线同名不同版本
 	//QString strQuerySameLine = QString(QStringLiteral("select lineNo, programName, version from smtProgram where programName in "))
 	//	.append(QStringLiteral("( select programName from smtProgram group by lineNo, programName having count(*) > 1 ) order by programName,lineNo ")); //查找同线同名
-	QString strQuerySameLine = QString(QStringLiteral("select lineNo, programName, version from smtProgram a where programName in (select programName "))
+	QString strQuerySameLine = QString(QStringLiteral("select lineNo, programName, track, version from smtProgram a where programName in (select programName "))
 		.append(QStringLiteral(" from smtProgram b where a.programName = b.programName and a.version <> b.version and a.lineNo = b.lineNo ) order by programName, lineNo")); //查找同线同名不同版本
 	if (DisplayResult(strQuerySameName,strQuerySameLine) == true)
 	{
@@ -358,7 +359,8 @@ bool UniquenessCheck::DisplayResult(QString sqlQuerySameName, QString sqlQuerySa
 	
 	model1->setHeaderData(0, Qt::Horizontal, QStringLiteral("LineNo"));
 	model1->setHeaderData(1, Qt::Horizontal, QStringLiteral("ProgramName"));
-	model1->setHeaderData(2, Qt::Horizontal, QStringLiteral("Version"));
+	model1->setHeaderData(2, Qt::Horizontal, QStringLiteral("Track"));
+	model1->setHeaderData(3, Qt::Horizontal, QStringLiteral("Version"));
 
 	QHeaderView *hor1 = ui.tableView_1->horizontalHeader();
 	hor1->setSectionResizeMode(QHeaderView::Inteivracte);//表头可调整列宽
@@ -373,7 +375,8 @@ bool UniquenessCheck::DisplayResult(QString sqlQuerySameName, QString sqlQuerySa
 	
 	model2->setHeaderData(0, Qt::Horizontal, QStringLiteral("LineNo"));
 	model2->setHeaderData(1, Qt::Horizontal, QStringLiteral("ProgramName"));
-	model2->setHeaderData(2, Qt::Horizontal, QStringLiteral("Version"));
+	model2->setHeaderData(2, Qt::Horizontal, QStringLiteral("Track"));
+	model2->setHeaderData(3, Qt::Horizontal, QStringLiteral("Version"));
 	QHeaderView *hor2 = ui.tableView_2->horizontalHeader();
 	hor2->setSectionResizeMode(QHeaderView::Inteivracte);//表头可调整列宽
 	hor2->setSectionResizeMode(QHeaderView::ResizeToContents);  //按内容调整表头大小
