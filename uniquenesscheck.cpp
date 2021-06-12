@@ -4,31 +4,90 @@ UniquenessCheck::UniquenessCheck(QWidget *parent)
 	: QMainWindow(parent)
 {
 	ui.setupUi(this);
+    loadingWidget = nullptr;
+    timer = new QTimer(this);
+    timing = new QTimer(this);
+    model1 = new MySqlQueryModel();
+    model2 = new MySqlQueryModel();
+    queryModel = new MySqlQueryModel();
+    completer = nullptr;
+
 	ReadSettings();
 	ConnectDatabase();
-	OnRecheckButtonClicked();
-	welcomeLabel.setText(QStringLiteral("Welcome！"));
-	ui.statusBar->addWidget(&welcomeLabel);
+	
+    okIcon.load(":/UniquenessCheck/Resources/icon-ok.png");
+    failIcon.load(":/UniquenessCheck/Resources/icon-fail.png");
+	
 
-	//状态栏显示时间日期
-	currentTimeLabel = new QLabel;
-	QTimer *timer = new QTimer(this);
-	timer->start(1000); // 每次发射timeout信号时间间隔为1秒
-	ui.statusBar->addWidget(currentTimeLabel);
-	connect(timer,&QTimer::timeout,this,&UniquenessCheck::UpdateTime);
+    QStringList intervalList = interval.split(",");
+    ui.comboBoxInterval->clear();
+    for (int i = 0; i < intervalList.size(); i++)
+    {
+        ui.comboBoxInterval->addItem(intervalList.at(i));
+    }
 
-	connect(ui.pushButtonRecheck, static_cast<void (QPushButton::*)(bool)>(&QPushButton::clicked), this, &UniquenessCheck::OnRecheckButtonClicked);
-	//connect(ui.pushButtonRecheck, static_cast<void (QPushButton::*)(bool)>(&QPushButton::clicked), this, &UniquenessCheck::CheckActionOnce);
-	connect(ui.buttonBoxQuery,&QDialogButtonBox::clicked,this,&UniquenessCheck::OnButtonBoxQueryClicked);
+    ui.buttonBoxQuery->button(QDialogButtonBox::Ok)->setText(QStringLiteral("确定")); // 将buttonbox中的ok汉化
+    ui.buttonBoxQuery->button(QDialogButtonBox::Reset)->setText(QStringLiteral("重置"));
 
+    connect(ui.pushButtonWriteOnce, &QPushButton::clicked, this, &UniquenessCheck::OnPushButtonWriteOnceClicked);
+    connect(ui.pushButtonAutoWrite, &QPushButton::clicked, this, &UniquenessCheck::OnPushButtonAutoWriteClicked);
+	connect(ui.buttonBoxQuery, &QDialogButtonBox::clicked, this, &UniquenessCheck::OnButtonBoxQueryClicked);
+    connect(this, &UniquenessCheck::StartCheck, this, &UniquenessCheck::ShowLoadingWidget);
+    connect(this, &UniquenessCheck::CheckFinished, this, &UniquenessCheck::CloseLoadingWidget);
 	//tabWidget标签切换信号
 	connect(ui.tabWidget, static_cast<void (QTabWidget::*)(int)>(&QTabWidget::currentChanged), [=](int index){OnTabWidgetCurrentChanged(index);});
 
 	//查询界面 字典设置随线别改变而改变
-	connect(ui.comboBoxLineNo,static_cast<void (QComboBox::*)(int)>(&QComboBox::activated), [=]{setWordList();});
+    connect(ui.comboBoxLineNo, &QComboBox::currentTextChanged, [=](){OnComboBoxLineNoCurrentTextChanged();});
+	//connect(ui.comboBoxLineNo,static_cast<void (QComboBox::*)(int)>(&QComboBox::activated), [=]{setWordList();});
+
+    connect(timer, &QTimer::timeout, 
+        [=]()
+    {
+        if (loadingWidget == nullptr)
+        {
+            OnPushButtonWriteOnceClicked();
+        } 
+        else if (!loadingWidget->isVisible())
+        {
+            OnPushButtonWriteOnceClicked();
+        }
+    });
+
+    connect(timing, &QTimer::timeout,
+        [=]()
+    {
+        if (remainSec == 0)
+        {
+            remainSec = intervalSec;
+        }
+        int hh = remainSec / 3600;
+        int mm = (remainSec % 3600) / 60;
+        int ss = remainSec % 60;
+        QString text = QStringLiteral("自动检查已设置，距离下次检查还有: ");
+        text.append(QString("  %1 hh").arg(hh, 2, 10, QLatin1Char('0')));
+        text.append(QString(" %1 mm").arg(mm, 2, 10, QLatin1Char('0')));
+        text.append(QString(" %1 ss").arg(ss, 2, 10, QLatin1Char('0')));
+        ui.labelTiming->setText(text);
+        ui.labelTiming->setStyleSheet(QStringLiteral("font: 75 14pt \"微软雅黑\";background-color:green"));
+        remainSec--;
+    });
+}
+
+UniquenessCheck::~UniquenessCheck()
+{
+    delete model1;
+    delete model2;
+    delete queryModel;
+    delete completer;
 }
 
 MySqlQueryModel::MySqlQueryModel()
+{
+
+}
+
+MySqlQueryModel::~MySqlQueryModel()
 {
 
 }
@@ -39,25 +98,28 @@ QVariant MySqlQueryModel::data(const QModelIndex &index, int role) const
 
 	if(role == Qt::TextAlignmentRole)
 	{
-		//value = (Qt::AlignCenter);//居中对齐
-		//return value;
-		return QVariant(Qt::AlignCenter);
+        value = Qt::AlignCenter; // 居中对齐
+        return value;
 	}
 
 	return value;
 }
+
 void UniquenessCheck::ReadSettings()
 {
-	config = new QSettings("config.ini",QSettings::IniFormat);
-
-    for (int i = 0; i < TOTALLINES; i++)
+    config = new QSettings("config.ini", QSettings::IniFormat);
+    totalLines = config->value("/TotalLines/TotalLines").toInt();
+    interval = config->value("/TotalLines/interval").toString();
+    for (int i = 1; i <= totalLines; i++)
     {
-		srcDir[i] = config->value(QStringLiteral("SrcDir/SMT%1").arg(i)).toString();
-		qDebug()<<srcDir[i];
+        srcDirMap[QString("SMT%1").arg(i, 2, 10, QLatin1Char('0'))] = config->value(QStringLiteral("SrcDir/SMT%1")
+            .arg(i, 2, 10, QLatin1Char('0'))).toString();	
     }
+    
 	accessDatabaseDir = config->value("Access/dbDir").toString();
 	accessDatabaseUID = config->value("Access/userId").toString();
 	accessDatabasePWD = config->value("Access/password").toString();
+    delete config;
 }
 
 bool UniquenessCheck::ConnectDatabase()
@@ -66,165 +128,74 @@ bool UniquenessCheck::ConnectDatabase()
 	accessDB.setDatabaseName(QString("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=%1;UID=%2;PWD=%3")
 		.arg(accessDatabaseDir,accessDatabaseUID,accessDatabasePWD));
 
-	if(!accessDB.open())                                  //打开数据库
+	if(!accessDB.open()) 
 	{
 		qDebug()<<accessDB.lastError().text();
-		QMessageBox::critical(0, QObject::tr("Database error"), accessDB.lastError().text());
+		QMessageBox::critical(this, QObject::tr("Database error"), accessDB.lastError().text(), QMessageBox::Yes);
 
-		ui.connDB->setText("DB not Connected");
-		ui.connDB->setStyleSheet("background-color:red");
-		return false;                                   //打开失败
+		ui.connDB->setText("DB NG");
+		ui.connDB->setStyleSheet("font: 75 16pt;background-color:red");
+		return false;
 	}
 	else
 	{
-		qDebug()<<"database open success!";
-		ui.connDB->setText("DB is Connected");
-		ui.connDB->setStyleSheet("background-color:green");
+		ui.connDB->setText("DB OK");
+		ui.connDB->setStyleSheet("font: 75 16pt;background-color:green");
 		return true;
-	}
-}
-
-QCompleter * UniquenessCheck::wordListProgramName(QString lineNo)
-{
-	if (!accessDB.open())
-	{
-		ConnectDatabase();
-	}
-
-	QSqlQuery *QueryProgramName = new QSqlQuery(accessDB);
-	QString sqlQueryProgramName;
-	if (lineNo.isEmpty())
-	{
-		sqlQueryProgramName = QString(QStringLiteral("select programName from smtProgram group by programName"));
-	} 
-	else
-	{
-		sqlQueryProgramName = QString(QStringLiteral("select programName from smtProgram where lineNo = '%1' group by programName").arg(lineNo));
-	}
-	
-	QueryProgramName->exec(sqlQueryProgramName);
-
-	QStringList wordList;
-	while(QueryProgramName->next())
-	{
-		//设置字典,自动补全提示
-		wordList << QueryProgramName->value("programName").toString();
-
-	}
-	//qDebug()<<wordList;
-	QCompleter *completer = new QCompleter(wordList, this);
-	completer->setCaseSensitivity(Qt::CaseInsensitive);
-
-	return completer;
-}
-
-void UniquenessCheck::setWordList()
-{
-	QString lineNo = ui.comboBoxLineNo->currentText();
-	ui.lineEditProgramName->setCompleter(wordListProgramName(lineNo));
-}
-
-void UniquenessCheck::UpdateTime()
-{
-	QDateTime currentTime = QDateTime::currentDateTime();
-	QString strTime = currentTime.toString(QStringLiteral("yyyy-MM-dd hh:mm:ss"));
-	currentTimeLabel->setText(strTime);
-	if (!strTime.right(8).compare("07:30:36"))
-	{
-		OnRecheckButtonClicked();
 	}
 }
 
 void UniquenessCheck::DecompressingFiles()
 {
-	for (int i = 0; i < TOTALLINES; i++)
-	{
-		if (!srcDir[i].isNull())
-		{
-			std::string delCommand = QString(QStringLiteral("del /f /s /q PPDFolder\\SMT%1\\*.*").arg(i)).toStdString();
-			//std::cout<<delCommand.c_str();
-			system(delCommand.c_str());//清空PPDFolder文件夹
-			std::string rarCommand = QString(QStringLiteral("WinRar x -or %1\\*.zip PPDFolder\\SMT%2\\").arg(srcDir[i]).arg(i)).toStdString();
-			//std::cout<<rarCommand.c_str();
-			system(rarCommand.c_str());//解压文件
-		}
-	}
+    for (int i = 1; i <= totalLines; i++)
+    {
+        if (!srcDirMap.value(QString("SMT%1").arg(i, 2, 10, QLatin1Char('0'))).isEmpty())
+        {
+            std::string delCommand = QString(QStringLiteral("del /f /s /q PPDFolder\\SMT%1\\*.*")
+                .arg(i, 2, 10, QLatin1Char('0'))).toStdString();
+            system(delCommand.c_str()); // 清空PPDFolder文件夹
+            std::string rarCommand = QString(QStringLiteral("WinRar x -or -y %1\\*.zip PPDFolder\\SMT%2\\")
+                .arg(srcDirMap[QString("SMT%1").arg(i, 2, 10, QLatin1Char('0'))])
+                .arg(i, 2, 10, QLatin1Char('0'))).toStdString();
+            system(rarCommand.c_str()); // 解压文件
+        }
+    }
 }
 
-//C++方式实现文件查找
-//void UniquenessCheck::FindCrbFiles()
-//{
-//	struct _finddata_t fileinfo;
-//	
-//	for (int i = 0; i < TOTALLINES; i++)
-//	{
-//		if (!srcDir[i].isNull())
-//		{
-//			std::string lineNo = QStringLiteral("SMT%1").arg(i).toStdString();
-//			std::string crbDir = "PPDFolder\\" + srcDir[i].toStdString();
-//			std::string fileType = crbDir + "\\*.crb";
-//			std::string fileName;
-//			long handle;
-//			if ((handle = _findfirst(fileType.c_str(),&fileinfo)) == -1L)
-//			{
-//				qDebug()<<"Not found .crb file";
-//			} 
-//			else
-//			{
-//				fileName = crbDir + "\\" + fileinfo.name;
-//				ReadCrbFiles(fileName,lineNo);
-//				while (!(_findnext(handle,&fileinfo)))
-//				{
-//					fileName = crbDir + "\\" + fileinfo.name;
-//					ReadCrbFiles(fileName,lineNo);
-//				}
-//				_findclose(handle);
-//			}
-//		}
-//	}
-//}
 
-void UniquenessCheck::FindCrbFiles()
+void UniquenessCheck::FindCrbFiles(QFileInfoList &fileInfo, QString lineNo)
 {
-	for (int i = 0; i < TOTALLINES; i++)
-	{
-		if (!srcDir[i].isNull())
-		{
-			QString lineNo = QString("SMT%1").arg(i);
-			QString crbDir = QString("PPDFolder\\").append(lineNo);
-			QDir dir = QDir(crbDir);
-			QStringList nameFilters;
-			nameFilters << "*.crb";
-			dir.setNameFilters(nameFilters);
-			QFileInfoList fileInfo = dir.entryInfoList(nameFilters);
-			for (int j = 0; j<fileInfo.size(); j++)
-			{
-				QString filePath = fileInfo.at(j).filePath();
-				//qDebug()<<filePath;
-				ReadCrbFiles(filePath,lineNo);
-			}
-
-		}
-	}
+    QString crbDir = QString("PPDFolder\\").append(lineNo);
+    QDir dir = QDir(crbDir);
+    QStringList nameFilters;
+    nameFilters << "*.crb";
+    dir.setNameFilters(nameFilters);
+    fileInfo = dir.entryInfoList(nameFilters);
 }
 
-void UniquenessCheck::ReadCrbFiles(QString filePath,QString lineNo)
+void UniquenessCheck::ReadCrbFiles(QString filePath, QStringList &insertDataList)
 {
 	QFile file(filePath);
 	qDebug()<<file.fileName();
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
-		qDebug()<<"open file error"<<endl;
+        QMessageBox mb;
+        mb.setIcon(QMessageBox::Critical);
+        mb.setIconPixmap(failIcon);
+        mb.setText(QStringLiteral("<font size = 6>文件%1打开失败！</font>").arg(filePath));
+        mb.exec();
 		return;
 	}
 	QTextStream in(&file);
-	QString line = in.readLine();
 	int flag = 0;
-	while (!line.isNull()) 
+	while (!in.atEnd()) 
 	{
+        QString line = in.readLine();
 		if (!line.compare("[LotNames]"))
 		{
 			flag = 1;
+            in.readLine();
+            continue;
 		}
 		if (!line.compare("[BoardData<1>]"))
 		{
@@ -234,49 +205,75 @@ void UniquenessCheck::ReadCrbFiles(QString filePath,QString lineNo)
 		}
 		if (flag == 1)
 		{
-			QStringList list = line.split("\"",QString::SkipEmptyParts);
+			QStringList list = line.split(" ", QString::KeepEmptyParts);
 			qDebug()<<list.size();
-			if (list.size() > 8)
+			if (list.size() > 11)
 			{
-				QString prgName = list.at(1);
-				QString prgTrack = list.at(4).trimmed().right(1);
-				QString prgVersion = list.at(8);
+				QString prgName = list.at(2);
+                prgName.replace("\"", "");
+				QString prgTrack = list.at(7);
+				QString prgVersion = list.at(11);
+                prgVersion.replace("\"", "");
 				qDebug()<<prgName<<" "<<prgVersion<<" "<<prgTrack;
-				InsertData(prgName,prgVersion,lineNo,prgTrack);
+                QString insertRecord = prgName + ";" + prgTrack + ";" + prgVersion;
+				insertDataList.append(insertRecord);
 			}
-			
 		}
-		line = in.readLine();
 	}
+    file.close();
 }
 
-void UniquenessCheck::InsertData(QString prgName, QString prgVersion, QString lineNo, QString track)
+void UniquenessCheck::InsertData(QStringList &insertDataList, QString lineNo)
 {
-	if(!accessDB.open()) 
+	if (insertDataList.isEmpty() || lineNo.isEmpty())
 	{
-		ConnectDatabase();
-	}
-	if (prgName.isEmpty() || prgVersion.isEmpty() || lineNo.isEmpty())
-	{
-		qDebug()<<"the value of prgName or prgVersion or lineNo is null";
+		qDebug()<<"the value of insertDataList or lineNo is null";
 		return;
 	}
+    if(!accessDB.open()) 
+    {
+        ConnectDatabase();
+    }
 	QSqlDatabase::database().transaction();
+    int flag = 0;
 	QSqlQuery *sqlQuery = new QSqlQuery(accessDB);
-	QString strInsert = QString(QStringLiteral("insert into smtProgram(lineNo,programName,track,version) values ('%1','%2','%3','%4')")
-		                .arg(lineNo,prgName,track,prgVersion));
-	sqlQuery->exec(strInsert);
-	if (sqlQuery->numRowsAffected() > 0)
+    for (int i = 0; i < insertDataList.size(); i++)
+    {
+        QStringList list = insertDataList.at(i).split(";");
+        if (list.size() < 3)
+        {
+            continue;
+        }
+        QString prgName = list.at(0);
+        QString prgTrack = list.at(1);
+        QString prgVersion = list.at(2);
+        QString strInsert = QString(QStringLiteral("insert into smtProgram(lineNo, programName, track, version) values ('%1','%2','%3','%4')")
+            .arg(lineNo, prgName, prgTrack, prgVersion));
+        sqlQuery->exec(strInsert);
+        if (sqlQuery->numRowsAffected() == 0 || sqlQuery->numRowsAffected() == -1)
+        {
+            flag = -1;
+            QFile log("./log/errorLog.txt");
+            log.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Append);
+            QString strLog = QDateTime::currentDateTime().toString() + strInsert + "\n" + sqlQuery->lastError().text();
+            QByteArray byteLog(strLog.toLocal8Bit());
+            log.write(byteLog);
+            log.close();
+        }
+    }
+	
+	if (flag == -1)
 	{
-		qDebug()<<"Insert data successed!";
-		QSqlDatabase::database().commit();
+        qDebug()<<"Insert data failed!";
+        QSqlDatabase::database().rollback();
+		
 	} 
 	else
 	{
-		qDebug()<<"Insert data failed!";
-		QSqlDatabase::database().rollback();
+        qDebug()<<"Insert data successed!";
+        QSqlDatabase::database().commit();
 	}
-
+    delete sqlQuery;
 }
 
 void UniquenessCheck::ClearTable()
@@ -287,8 +284,8 @@ void UniquenessCheck::ClearTable()
 	}
 	QSqlDatabase::database().transaction();
 	QSqlQuery *sqlQuery = new QSqlQuery(accessDB);
-	QString strDelete = QString(QStringLiteral("delete * from smtProgram"));//删除表中数据
-	QString strCounter = QString(QStringLiteral("alter table smtProgram alter column ID counter(1,1)")); //修正自增列
+	QString strDelete = QString(QStringLiteral("delete * from smtProgram")); // 删除表中数据
+	QString strCounter = QString(QStringLiteral("alter table smtProgram alter column ID counter(1,1)")); // 修正自增列
 	sqlQuery->exec(strDelete);
 	if (sqlQuery->numRowsAffected() > 0)
 	{
@@ -302,7 +299,7 @@ void UniquenessCheck::ClearTable()
 		qDebug()<<"Clear table failed!";
 		QSqlDatabase::database().rollback();
 	}
-
+    delete sqlQuery;
 }
 
 void UniquenessCheck::CheckActionOnce()
@@ -313,39 +310,86 @@ void UniquenessCheck::CheckActionOnce()
 	//	.append(QStringLiteral("( select programName from smtProgram group by lineNo, programName having count(*) > 1 ) order by programName,lineNo ")); //查找同线同名
 	QString strQuerySameLine = QString(QStringLiteral("select lineNo, programName, track, version from smtProgram a where programName in (select programName "))
 		.append(QStringLiteral(" from smtProgram b where a.programName = b.programName and a.version <> b.version and a.lineNo = b.lineNo ) order by programName, lineNo")); //查找同线同名不同版本
-	if (DisplayResult(strQuerySameName,strQuerySameLine) == true)
+	if (DisplayResult(strQuerySameName, strQuerySameLine) == true)
 	{
-		ui.labelResult->setText(QString(QStringLiteral("The Result is NOK")));
-		ui.labelResult->setStyleSheet("background-color:red");
+        QMessageBox mb;
+        mb.setIcon(QMessageBox::Critical);
+        mb.setIconPixmap(failIcon);
+        mb.setText(QStringLiteral("<font size = 6>程序版本异常!(%1)</font>").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss")));
+        ui.labelTiming->setStyleSheet(QStringLiteral("font: 75 14pt \"微软雅黑\";background-color:red"));
+        mb.exec();
+        emit CheckFinished();
 	} 
 	else
 	{
-		ui.labelResult->setText(QString(QStringLiteral("The Result is OK")));
-		ui.labelResult->setStyleSheet("background-color:green");
+        QMessageBox mb;
+        mb.setIcon(QMessageBox::Information);
+        mb.setIconPixmap(okIcon);
+        mb.setText(QStringLiteral("<font size = 6>检查完成，程序版本正常(%1)</font>").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss")));
+        ui.labelTiming->setStyleSheet(QStringLiteral("font: 75 14pt \"微软雅黑\";background-color:green"));
+        mb.exec();
+        emit CheckFinished();
 	}
-	QDateTime currentTime = QDateTime::currentDateTime();
-	QString strTime = currentTime.toString(QStringLiteral("hh:mm:ss yyyy-MM-dd"));
-	ui.labelTime->setText(strTime);
 }
 
-void UniquenessCheck::OnRecheckButtonClicked()
+void UniquenessCheck::OnPushButtonWriteOnceClicked()
 {
-	ClearTable();
-	DecompressingFiles();
-	FindCrbFiles();
-	CheckActionOnce();
-}
+    emit StartCheck();
 
+    ClearTable();
+    DecompressingFiles();
+    QMapIterator<QString, QString> i(srcDirMap);
+    while (i.hasNext())
+    {
+        i.next();
+        if (i.value().isEmpty())
+        {
+            continue;
+        }
+        QString lineNo = i.key();
+        QFileInfoList fileInfo;
+        FindCrbFiles(fileInfo, lineNo);
+        for (int j = 0; j < fileInfo.size(); j++)
+        {
+            QString filePath = fileInfo.at(j).filePath();
+            QString fileName = fileInfo.at(j).baseName();
+            QStringList insertDataList;
+            ReadCrbFiles(filePath, insertDataList);
+            InsertData(insertDataList, lineNo);
+        }
+    }
+    
+    CheckActionOnce();
+}
+    
+void UniquenessCheck::OnPushButtonAutoWriteClicked()
+{
+    int h = ui.comboBoxInterval->currentText().toInt();
+    if (timer->isActive())
+    {
+        timer->stop();
+    }
+    timer->setInterval(60 * 60 * 1000 * h);
+    timer->start();
+
+    if (timing->isActive())
+    {
+        timing->stop();
+    }
+    timing->setInterval(1000);
+    intervalSec = h * 60 * 60;
+    remainSec = intervalSec;
+    timing->start();
+}
 bool UniquenessCheck::DisplayResult(QString sqlQuerySameName, QString sqlQuerySameLine)
 {
 	if(!accessDB.open()) 
 	{
 		ConnectDatabase();
 	}
-	MySqlQueryModel *model1 = new MySqlQueryModel();
-	model1->setQuery(sqlQuerySameName,accessDB);
-	MySqlQueryModel *model2 = new MySqlQueryModel();
-	model2->setQuery(sqlQuerySameLine,accessDB);
+	
+	model1->setQuery(sqlQuerySameName, accessDB);
+	model2->setQuery(sqlQuerySameLine, accessDB);
 	
 	bool returnFlag;
 	if (model1->rowCount() > 0 || model2->rowCount() > 0)
@@ -396,15 +440,16 @@ void UniquenessCheck::QueryAllLineNo()
 	{
 		ConnectDatabase();
 	}
-	QSqlQuery *queryAllLineNo = new QSqlQuery(accessDB);
+	QSqlQuery *sqlQurey = new QSqlQuery(accessDB);
 	QString sqlLineNo = QString(QStringLiteral("select lineNo from smtProgram group by lineNo order by lineNo"));
 	ui.comboBoxLineNo->clear();
 	ui.comboBoxLineNo->addItem("");
-	queryAllLineNo->exec(sqlLineNo);
-	while (queryAllLineNo->next())
+	sqlQurey->exec(sqlLineNo);
+	while (sqlQurey->next())
 	{
-		ui.comboBoxLineNo->addItem(queryAllLineNo->value("lineNo").toString());
+		ui.comboBoxLineNo->addItem(sqlQurey->value("lineNo").toString());
 	}
+    delete sqlQurey;
 }
 
 void UniquenessCheck::OnTabWidgetCurrentChanged(int idx)
@@ -412,11 +457,17 @@ void UniquenessCheck::OnTabWidgetCurrentChanged(int idx)
 	switch (idx)
 	{
 	case 0:
-		CheckActionOnce();
+        workerThread.wait(50);
+        ui.tableView_1->setModel(model1);
+        ui.tableView_1->show();
+        ui.tableView_2->setModel(model2);
+        ui.tableView_2->show();
 		break;
 	case 1:
 		QueryAllLineNo();
-		setWordList();
+		OnComboBoxLineNoCurrentTextChanged();
+        ui.tableView->setModel(queryModel);
+        ui.tableView->show();
 		break;
 	}
 }
@@ -447,8 +498,7 @@ void UniquenessCheck::OnButtonBoxQueryClicked(QAbstractButton *button)
 		{
 			sqlQueryProgramName = QString(QStringLiteral("select * from smtProgram where lineNo = '%1' and programName like '%%%2%%' order by ID,lineNo, programName").arg(lineNo).arg(programName));
 		}
-		MySqlQueryModel *model = new MySqlQueryModel();
-		model->setQuery(sqlQueryProgramName,accessDB);
+		queryModel->setQuery(sqlQueryProgramName, accessDB);
 		
 		//model->setHeaderData(0, Qt::Horizontal, QStringLiteral("LineNo"));
 		//model->setHeaderData(1, Qt::Horizontal, QStringLiteral("ProgramName"));
@@ -461,12 +511,68 @@ void UniquenessCheck::OnButtonBoxQueryClicked(QAbstractButton *button)
 
 		ui.tableView->verticalHeader()->hide();//隐藏垂直表头(行标)
 		ui.tableView->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch);//均分行，填满整个表
-		ui.tableView->setModel(model);
+		ui.tableView->setModel(queryModel);
 		ui.tableView->show();
 		
 	}
 }
-UniquenessCheck::~UniquenessCheck()
-{
 
+void UniquenessCheck::OnComboBoxLineNoCurrentTextChanged()
+{
+    if (!accessDB.open())
+    {
+        ConnectDatabase();
+    }
+    QString lineNo = ui.comboBoxLineNo->currentText();
+    QSqlQuery *sqlQuery = new QSqlQuery(accessDB);
+    QString sqlQueryProgramName;
+    if (lineNo.isEmpty())
+    {
+        sqlQueryProgramName = QString(QStringLiteral("select programName from smtProgram group by programName"));
+    } 
+    else
+    {
+        sqlQueryProgramName = QString(QStringLiteral("select programName from smtProgram where lineNo = '%1' group by programName").arg(lineNo));
+    }
+
+    sqlQuery->exec(sqlQueryProgramName);
+
+    QStringList wordList;
+    while(sqlQuery->next())
+    {
+        //设置字典,自动补全提示
+        wordList << sqlQuery->value("programName").toString();
+
+    }
+
+    if (completer != nullptr)
+    {
+        delete completer;
+        completer = nullptr;
+    }
+    completer = new QCompleter(wordList, this);
+    completer->setCaseSensitivity(Qt::CaseInsensitive);
+    completer->setCompletionMode(QCompleter::UnfilteredPopupCompletion);
+    completer->setFilterMode(Qt::MatchContains);
+    ui.lineEditProgramName->setCompleter(completer);
+
+    delete sqlQuery;
 }
+
+void UniquenessCheck::ShowLoadingWidget()
+{
+    loadingWidget = new LoadingWidget(this);
+    loadingWidget->setWindowModality(Qt::WindowModal);
+    loadingWidget->show();
+}
+
+void UniquenessCheck::CloseLoadingWidget()
+{
+    if (loadingWidget->isVisible())
+    {
+        loadingWidget->close();
+        delete loadingWidget;
+        loadingWidget = nullptr;
+    }
+}
+

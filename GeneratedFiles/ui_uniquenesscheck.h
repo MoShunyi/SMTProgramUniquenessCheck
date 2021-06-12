@@ -38,23 +38,27 @@ class Ui_UniquenessCheckClass
 public:
     QWidget *centralWidget;
     QHBoxLayout *horizontalLayout_2;
+    QVBoxLayout *verticalLayout_5;
     QVBoxLayout *verticalLayout;
     QHBoxLayout *horizontalLayout;
     QLabel *logo;
-    QSpacerItem *horizontalSpacer_2;
     QLabel *title;
-    QSpacerItem *horizontalSpacer_3;
     QLabel *connDB;
+    QLabel *label;
+    QLabel *labelUnderline;
     QTabWidget *tabWidget;
     QWidget *tabResult;
-    QHBoxLayout *horizontalLayout_5;
+    QHBoxLayout *horizontalLayout_7;
+    QVBoxLayout *verticalLayout_4;
     QVBoxLayout *verticalLayout_2;
     QHBoxLayout *horizontalLayout_3;
-    QLabel *label_2;
-    QLabel *labelTime;
-    QSpacerItem *horizontalSpacer;
-    QPushButton *pushButtonRecheck;
-    QLabel *labelResult;
+    QLabel *labelInterval;
+    QComboBox *comboBoxInterval;
+    QSpacerItem *horizontalSpacer_9;
+    QPushButton *pushButtonWriteOnce;
+    QPushButton *pushButtonAutoWrite;
+    QHBoxLayout *horizontalLayout_5;
+    QLabel *labelTiming;
     QHBoxLayout *horizontalLayout_4;
     QGroupBox *groupBox1;
     QVBoxLayout *verticalLayout_10;
@@ -83,7 +87,7 @@ public:
     {
         if (UniquenessCheckClass->objectName().isEmpty())
             UniquenessCheckClass->setObjectName(QStringLiteral("UniquenessCheckClass"));
-        UniquenessCheckClass->resize(1057, 732);
+        UniquenessCheckClass->resize(1339, 817);
         QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
@@ -95,6 +99,9 @@ public:
         horizontalLayout_2->setSpacing(6);
         horizontalLayout_2->setContentsMargins(11, 11, 11, 11);
         horizontalLayout_2->setObjectName(QStringLiteral("horizontalLayout_2"));
+        verticalLayout_5 = new QVBoxLayout();
+        verticalLayout_5->setSpacing(6);
+        verticalLayout_5->setObjectName(QStringLiteral("verticalLayout_5"));
         verticalLayout = new QVBoxLayout();
         verticalLayout->setSpacing(6);
         verticalLayout->setObjectName(QStringLiteral("verticalLayout"));
@@ -103,15 +110,17 @@ public:
         horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
         logo = new QLabel(centralWidget);
         logo->setObjectName(QStringLiteral("logo"));
-        QSizePolicy sizePolicy1(QSizePolicy::Maximum, QSizePolicy::Ignored);
+        QSizePolicy sizePolicy1(QSizePolicy::Preferred, QSizePolicy::Preferred);
         sizePolicy1.setHorizontalStretch(0);
         sizePolicy1.setVerticalStretch(0);
         sizePolicy1.setHeightForWidth(logo->sizePolicy().hasHeightForWidth());
         logo->setSizePolicy(sizePolicy1);
-        logo->setMaximumSize(QSize(380, 16777215));
+        logo->setMinimumSize(QSize(189, 20));
+        logo->setMaximumSize(QSize(380, 80));
+        logo->setSizeIncrement(QSize(9, 1));
         logo->setBaseSize(QSize(392, 60));
         logo->setInputMethodHints(Qt::ImhNone);
-        logo->setPixmap(QPixmap(QString::fromUtf8(":/image/Resources/image/Logo with Slogan_Blue.jpg")));
+        logo->setPixmap(QPixmap(QString::fromUtf8(":/UniquenessCheck/Resources/\344\274\201\344\270\232\346\240\207\345\277\227\344\270\216\344\274\201\344\270\232\344\270\255\350\213\261\346\226\207\345\205\250\347\247\260\347\273\204\345\220\210_\350\223\235\357\274\215Logo with Company Name in Chinese and English_Blue.jpg")));
         logo->setScaledContents(true);
         logo->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
         logo->setWordWrap(false);
@@ -121,26 +130,22 @@ public:
 
         horizontalLayout->addWidget(logo);
 
-        horizontalSpacer_2 = new QSpacerItem(10, 20, QSizePolicy::MinimumExpanding, QSizePolicy::Minimum);
-
-        horizontalLayout->addItem(horizontalSpacer_2);
-
         title = new QLabel(centralWidget);
         title->setObjectName(QStringLiteral("title"));
-        QSizePolicy sizePolicy2(QSizePolicy::Preferred, QSizePolicy::Preferred);
+        QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Preferred);
         sizePolicy2.setHorizontalStretch(0);
         sizePolicy2.setVerticalStretch(0);
         sizePolicy2.setHeightForWidth(title->sizePolicy().hasHeightForWidth());
         title->setSizePolicy(sizePolicy2);
-        title->setMinimumSize(QSize(0, 60));
+        title->setMinimumSize(QSize(500, 60));
         QFont font;
         font.setFamily(QString::fromUtf8("\351\273\221\344\275\223"));
-        font.setPointSize(16);
+        font.setPointSize(20);
         font.setBold(false);
         font.setItalic(false);
         font.setWeight(9);
         title->setFont(font);
-        title->setStyleSheet(QString::fromUtf8("font: 75 16pt \"\351\273\221\344\275\223\";\n"
+        title->setStyleSheet(QString::fromUtf8("font: 75 20pt \"\351\273\221\344\275\223\";\n"
 "color: rgb(0, 57, 115);"));
         title->setScaledContents(true);
         title->setAlignment(Qt::AlignCenter);
@@ -149,18 +154,12 @@ public:
 
         horizontalLayout->addWidget(title);
 
-        horizontalSpacer_3 = new QSpacerItem(10, 20, QSizePolicy::MinimumExpanding, QSizePolicy::Minimum);
-
-        horizontalLayout->addItem(horizontalSpacer_3);
-
         connDB = new QLabel(centralWidget);
         connDB->setObjectName(QStringLiteral("connDB"));
-        QSizePolicy sizePolicy3(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred);
-        sizePolicy3.setHorizontalStretch(0);
-        sizePolicy3.setVerticalStretch(0);
-        sizePolicy3.setHeightForWidth(connDB->sizePolicy().hasHeightForWidth());
-        connDB->setSizePolicy(sizePolicy3);
-        connDB->setMinimumSize(QSize(200, 60));
+        sizePolicy1.setHeightForWidth(connDB->sizePolicy().hasHeightForWidth());
+        connDB->setSizePolicy(sizePolicy1);
+        connDB->setMinimumSize(QSize(0, 0));
+        connDB->setMaximumSize(QSize(200, 200));
         QFont font1;
         font1.setFamily(QString::fromUtf8("\345\276\256\350\275\257\351\233\205\351\273\221"));
         font1.setPointSize(14);
@@ -170,12 +169,42 @@ public:
         connDB->setFont(font1);
         connDB->setStyleSheet(QString::fromUtf8("font: 75 14pt \"\345\276\256\350\275\257\351\233\205\351\273\221\";\n"
 ""));
+        connDB->setScaledContents(true);
         connDB->setAlignment(Qt::AlignCenter);
 
         horizontalLayout->addWidget(connDB);
 
+        label = new QLabel(centralWidget);
+        label->setObjectName(QStringLiteral("label"));
+        sizePolicy1.setHeightForWidth(label->sizePolicy().hasHeightForWidth());
+        label->setSizePolicy(sizePolicy1);
+        label->setMinimumSize(QSize(189, 20));
+        label->setMaximumSize(QSize(380, 60));
+        label->setSizeIncrement(QSize(2, 1));
+        label->setPixmap(QPixmap(QString::fromUtf8(":/UniquenessCheck/Resources/bosch.png")));
+        label->setScaledContents(true);
+        label->setAlignment(Qt::AlignCenter);
+
+        horizontalLayout->addWidget(label);
+
 
         verticalLayout->addLayout(horizontalLayout);
+
+        labelUnderline = new QLabel(centralWidget);
+        labelUnderline->setObjectName(QStringLiteral("labelUnderline"));
+        QSizePolicy sizePolicy3(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        sizePolicy3.setHorizontalStretch(0);
+        sizePolicy3.setVerticalStretch(0);
+        sizePolicy3.setHeightForWidth(labelUnderline->sizePolicy().hasHeightForWidth());
+        labelUnderline->setSizePolicy(sizePolicy3);
+        labelUnderline->setBaseSize(QSize(300, 0));
+        labelUnderline->setPixmap(QPixmap(QString::fromUtf8(":/UniquenessCheck/Resources/bottom.png")));
+        labelUnderline->setScaledContents(true);
+
+        verticalLayout->addWidget(labelUnderline);
+
+
+        verticalLayout_5->addLayout(verticalLayout);
 
         tabWidget = new QTabWidget(centralWidget);
         tabWidget->setObjectName(QStringLiteral("tabWidget"));
@@ -184,59 +213,76 @@ public:
         tabWidget->setIconSize(QSize(20, 20));
         tabResult = new QWidget();
         tabResult->setObjectName(QStringLiteral("tabResult"));
-        horizontalLayout_5 = new QHBoxLayout(tabResult);
-        horizontalLayout_5->setSpacing(6);
-        horizontalLayout_5->setContentsMargins(11, 11, 11, 11);
-        horizontalLayout_5->setObjectName(QStringLiteral("horizontalLayout_5"));
+        horizontalLayout_7 = new QHBoxLayout(tabResult);
+        horizontalLayout_7->setSpacing(6);
+        horizontalLayout_7->setContentsMargins(11, 11, 11, 11);
+        horizontalLayout_7->setObjectName(QStringLiteral("horizontalLayout_7"));
+        verticalLayout_4 = new QVBoxLayout();
+        verticalLayout_4->setSpacing(6);
+        verticalLayout_4->setObjectName(QStringLiteral("verticalLayout_4"));
         verticalLayout_2 = new QVBoxLayout();
         verticalLayout_2->setSpacing(6);
         verticalLayout_2->setObjectName(QStringLiteral("verticalLayout_2"));
         horizontalLayout_3 = new QHBoxLayout();
         horizontalLayout_3->setSpacing(6);
         horizontalLayout_3->setObjectName(QStringLiteral("horizontalLayout_3"));
-        label_2 = new QLabel(tabResult);
-        label_2->setObjectName(QStringLiteral("label_2"));
-        QSizePolicy sizePolicy4(QSizePolicy::Preferred, QSizePolicy::Ignored);
-        sizePolicy4.setHorizontalStretch(0);
-        sizePolicy4.setVerticalStretch(0);
-        sizePolicy4.setHeightForWidth(label_2->sizePolicy().hasHeightForWidth());
-        label_2->setSizePolicy(sizePolicy4);
+        labelInterval = new QLabel(tabResult);
+        labelInterval->setObjectName(QStringLiteral("labelInterval"));
+        QFont font2;
+        font2.setFamily(QString::fromUtf8("\351\273\221\344\275\223"));
+        font2.setPointSize(14);
+        font2.setBold(false);
+        font2.setItalic(false);
+        font2.setWeight(9);
+        labelInterval->setFont(font2);
+        labelInterval->setAutoFillBackground(true);
+        labelInterval->setAlignment(Qt::AlignCenter);
 
-        horizontalLayout_3->addWidget(label_2);
+        horizontalLayout_3->addWidget(labelInterval);
 
-        labelTime = new QLabel(tabResult);
-        labelTime->setObjectName(QStringLiteral("labelTime"));
-        sizePolicy4.setHeightForWidth(labelTime->sizePolicy().hasHeightForWidth());
-        labelTime->setSizePolicy(sizePolicy4);
+        comboBoxInterval = new QComboBox(tabResult);
+        comboBoxInterval->setObjectName(QStringLiteral("comboBoxInterval"));
+        comboBoxInterval->setFont(font2);
 
-        horizontalLayout_3->addWidget(labelTime);
+        horizontalLayout_3->addWidget(comboBoxInterval);
 
-        horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        horizontalSpacer_9 = new QSpacerItem(40, 20, QSizePolicy::Preferred, QSizePolicy::Minimum);
 
-        horizontalLayout_3->addItem(horizontalSpacer);
+        horizontalLayout_3->addItem(horizontalSpacer_9);
 
-        pushButtonRecheck = new QPushButton(tabResult);
-        pushButtonRecheck->setObjectName(QStringLiteral("pushButtonRecheck"));
+        pushButtonWriteOnce = new QPushButton(tabResult);
+        pushButtonWriteOnce->setObjectName(QStringLiteral("pushButtonWriteOnce"));
+        pushButtonWriteOnce->setFont(font2);
 
-        horizontalLayout_3->addWidget(pushButtonRecheck);
+        horizontalLayout_3->addWidget(pushButtonWriteOnce);
+
+        pushButtonAutoWrite = new QPushButton(tabResult);
+        pushButtonAutoWrite->setObjectName(QStringLiteral("pushButtonAutoWrite"));
+        pushButtonAutoWrite->setFont(font2);
+
+        horizontalLayout_3->addWidget(pushButtonAutoWrite);
 
 
         verticalLayout_2->addLayout(horizontalLayout_3);
 
-        labelResult = new QLabel(tabResult);
-        labelResult->setObjectName(QStringLiteral("labelResult"));
-        labelResult->setMinimumSize(QSize(0, 50));
-        QFont font2;
-        font2.setFamily(QString::fromUtf8("\351\273\221\344\275\223"));
-        font2.setPointSize(18);
-        font2.setBold(false);
-        font2.setItalic(false);
-        font2.setWeight(9);
-        labelResult->setFont(font2);
-        labelResult->setStyleSheet(QString::fromUtf8("font: 75 18pt \"\351\273\221\344\275\223\";"));
-        labelResult->setAlignment(Qt::AlignCenter);
+        horizontalLayout_5 = new QHBoxLayout();
+        horizontalLayout_5->setSpacing(6);
+        horizontalLayout_5->setObjectName(QStringLiteral("horizontalLayout_5"));
+        labelTiming = new QLabel(tabResult);
+        labelTiming->setObjectName(QStringLiteral("labelTiming"));
+        sizePolicy1.setHeightForWidth(labelTiming->sizePolicy().hasHeightForWidth());
+        labelTiming->setSizePolicy(sizePolicy1);
+        labelTiming->setMinimumSize(QSize(0, 60));
+        labelTiming->setFont(font2);
+        labelTiming->setAlignment(Qt::AlignCenter);
 
-        verticalLayout_2->addWidget(labelResult);
+        horizontalLayout_5->addWidget(labelTiming);
+
+
+        verticalLayout_2->addLayout(horizontalLayout_5);
+
+
+        verticalLayout_4->addLayout(verticalLayout_2);
 
         horizontalLayout_4 = new QHBoxLayout();
         horizontalLayout_4->setSpacing(6);
@@ -249,13 +295,7 @@ public:
         verticalLayout_10->setObjectName(QStringLiteral("verticalLayout_10"));
         tableView_1 = new QTableView(groupBox1);
         tableView_1->setObjectName(QStringLiteral("tableView_1"));
-        QFont font3;
-        font3.setFamily(QString::fromUtf8("\351\273\221\344\275\223"));
-        font3.setPointSize(14);
-        font3.setBold(false);
-        font3.setItalic(false);
-        font3.setWeight(9);
-        tableView_1->setFont(font3);
+        tableView_1->setFont(font2);
 
         verticalLayout_10->addWidget(tableView_1);
 
@@ -274,7 +314,7 @@ public:
         verticalLayout_11->setObjectName(QStringLiteral("verticalLayout_11"));
         tableView_2 = new QTableView(groupBox1_2);
         tableView_2->setObjectName(QStringLiteral("tableView_2"));
-        tableView_2->setFont(font3);
+        tableView_2->setFont(font2);
 
         verticalLayout_11->addWidget(tableView_2);
 
@@ -282,10 +322,10 @@ public:
         horizontalLayout_4->addWidget(groupBox1_2);
 
 
-        verticalLayout_2->addLayout(horizontalLayout_4);
+        verticalLayout_4->addLayout(horizontalLayout_4);
 
 
-        horizontalLayout_5->addLayout(verticalLayout_2);
+        horizontalLayout_7->addLayout(verticalLayout_4);
 
         tabWidget->addTab(tabResult, QString());
         tabQuery = new QWidget();
@@ -307,11 +347,8 @@ public:
 
         comboBoxLineNo = new QComboBox(tabQuery);
         comboBoxLineNo->setObjectName(QStringLiteral("comboBoxLineNo"));
-        QSizePolicy sizePolicy5(QSizePolicy::Expanding, QSizePolicy::Preferred);
-        sizePolicy5.setHorizontalStretch(0);
-        sizePolicy5.setVerticalStretch(0);
-        sizePolicy5.setHeightForWidth(comboBoxLineNo->sizePolicy().hasHeightForWidth());
-        comboBoxLineNo->setSizePolicy(sizePolicy5);
+        sizePolicy2.setHeightForWidth(comboBoxLineNo->sizePolicy().hasHeightForWidth());
+        comboBoxLineNo->setSizePolicy(sizePolicy2);
         comboBoxLineNo->setMinimumSize(QSize(0, 0));
 
         horizontalLayout_11->addWidget(comboBoxLineNo);
@@ -322,14 +359,14 @@ public:
 
         labelProgramName = new QLabel(tabQuery);
         labelProgramName->setObjectName(QStringLiteral("labelProgramName"));
-        labelProgramName->setFont(font3);
+        labelProgramName->setFont(font2);
 
         horizontalLayout_11->addWidget(labelProgramName);
 
         lineEditProgramName = new QLineEdit(tabQuery);
         lineEditProgramName->setObjectName(QStringLiteral("lineEditProgramName"));
-        sizePolicy2.setHeightForWidth(lineEditProgramName->sizePolicy().hasHeightForWidth());
-        lineEditProgramName->setSizePolicy(sizePolicy2);
+        sizePolicy1.setHeightForWidth(lineEditProgramName->sizePolicy().hasHeightForWidth());
+        lineEditProgramName->setSizePolicy(sizePolicy1);
         lineEditProgramName->setMaximumSize(QSize(16777215, 16777215));
 
         horizontalLayout_11->addWidget(lineEditProgramName);
@@ -340,8 +377,8 @@ public:
 
         buttonBoxQuery = new QDialogButtonBox(tabQuery);
         buttonBoxQuery->setObjectName(QStringLiteral("buttonBoxQuery"));
-        sizePolicy2.setHeightForWidth(buttonBoxQuery->sizePolicy().hasHeightForWidth());
-        buttonBoxQuery->setSizePolicy(sizePolicy2);
+        sizePolicy1.setHeightForWidth(buttonBoxQuery->sizePolicy().hasHeightForWidth());
+        buttonBoxQuery->setSizePolicy(sizePolicy1);
         buttonBoxQuery->setMaximumSize(QSize(200, 16777215));
         buttonBoxQuery->setStandardButtons(QDialogButtonBox::Ok|QDialogButtonBox::Reset);
 
@@ -360,15 +397,15 @@ public:
 
         tabWidget->addTab(tabQuery, QString());
 
-        verticalLayout->addWidget(tabWidget);
+        verticalLayout_5->addWidget(tabWidget);
 
 
-        horizontalLayout_2->addLayout(verticalLayout);
+        horizontalLayout_2->addLayout(verticalLayout_5);
 
         UniquenessCheckClass->setCentralWidget(centralWidget);
         menuBar = new QMenuBar(UniquenessCheckClass);
         menuBar->setObjectName(QStringLiteral("menuBar"));
-        menuBar->setGeometry(QRect(0, 0, 1057, 26));
+        menuBar->setGeometry(QRect(0, 0, 1339, 26));
         UniquenessCheckClass->setMenuBar(menuBar);
         mainToolBar = new QToolBar(UniquenessCheckClass);
         mainToolBar->setObjectName(QStringLiteral("mainToolBar"));
@@ -390,14 +427,22 @@ public:
         UniquenessCheckClass->setWindowTitle(QApplication::translate("UniquenessCheckClass", "UniquenessCheck", 0));
         logo->setText(QString());
         title->setText(QApplication::translate("UniquenessCheckClass", "SMT Program Uniqueness Check", 0));
-        connDB->setText(QApplication::translate("UniquenessCheckClass", "DB Connected", 0));
-        label_2->setText(QApplication::translate("UniquenessCheckClass", "Check Uniqueness at:", 0));
-        labelTime->setText(QApplication::translate("UniquenessCheckClass", "TextLabel", 0));
-        pushButtonRecheck->setText(QApplication::translate("UniquenessCheckClass", "Recheck", 0));
-        labelResult->setText(QApplication::translate("UniquenessCheckClass", "The result is OK", 0));
+        connDB->setText(QApplication::translate("UniquenessCheckClass", "DB", 0));
+        label->setText(QString());
+        labelUnderline->setText(QString());
+        labelInterval->setText(QApplication::translate("UniquenessCheckClass", "\346\227\266\351\227\264\351\227\264\351\232\224(H)\357\274\232", 0));
+        comboBoxInterval->clear();
+        comboBoxInterval->insertItems(0, QStringList()
+         << QApplication::translate("UniquenessCheckClass", "15", 0)
+         << QApplication::translate("UniquenessCheckClass", "30", 0)
+         << QApplication::translate("UniquenessCheckClass", "60", 0)
+        );
+        pushButtonWriteOnce->setText(QApplication::translate("UniquenessCheckClass", "\347\253\213\345\215\263\346\243\200\346\237\245\344\270\200\346\254\241", 0));
+        pushButtonAutoWrite->setText(QApplication::translate("UniquenessCheckClass", "\350\207\252\345\212\250\345\276\252\347\216\257\346\243\200\346\237\245", 0));
+        labelTiming->setText(QString());
         groupBox1->setTitle(QApplication::translate("UniquenessCheckClass", "Same Name In Different Line:", 0));
         groupBox1_2->setTitle(QApplication::translate("UniquenessCheckClass", "Same Name In Same Line:     ", 0));
-        tabWidget->setTabText(tabWidget->indexOf(tabResult), QApplication::translate("UniquenessCheckClass", "Result", 0));
+        tabWidget->setTabText(tabWidget->indexOf(tabResult), QApplication::translate("UniquenessCheckClass", "Check", 0));
         labelLineNo->setText(QApplication::translate("UniquenessCheckClass", "LineNo\357\274\232", 0));
         labelProgramName->setText(QApplication::translate("UniquenessCheckClass", "ProgramName\357\274\232", 0));
         tabWidget->setTabText(tabWidget->indexOf(tabQuery), QApplication::translate("UniquenessCheckClass", "Query", 0));
